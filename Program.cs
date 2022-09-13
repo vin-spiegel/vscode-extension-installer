@@ -1,7 +1,9 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace VSCode
 {
@@ -19,9 +21,9 @@ namespace VSCode
         
         private const string InstallCommand = "code --install-extension sumneko.lua@3.5.5";
 
-        private string _localUserName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-        
-        private DirectoryInfo _root;
+        private readonly DirectoryInfo _root;
+
+        private readonly Regex _regex = new Regex(@"([0-9][.][0-9][0-9][.][0-9])");
         
         /// <summary>
         /// command : 실행할 명령어 
@@ -56,10 +58,14 @@ namespace VSCode
 
             return resultValue == "" ? "" : resultValue;
         }
-        
-        public static void Main(string[] args)
+
+        public bool IsInstalled()
         {
-            new Program();
+            var context = ExecuteCmd("code --version");
+
+            var res = _regex.Match(context.Trim());
+
+            return res.Length > 0;
         }
 
         private Program()
@@ -74,14 +80,16 @@ namespace VSCode
             
             File.WriteAllText(Path.Combine(vscodeFolderPath, "extensions.json"), Extensions, Encoding.UTF8);
 
-            var path = string.Format(VSCodePath, Environment.UserName);
-            var fi = new FileInfo(path);
-
-            if (!fi.Exists)
+            if (!IsInstalled())
                 return;
             
             var resultText = ExecuteCmd(InstallCommand);
             var result = ExecuteCmd($"code {_root}");
+        }
+        
+        public static void Main(string[] args)
+        {
+            new Program();
         }
     }
 }
